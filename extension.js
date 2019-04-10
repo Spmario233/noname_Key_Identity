@@ -2,15 +2,18 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
     lib.group.push('xKey');
     lib.translate.xKey='键';
     lib.characterTitle.shiroha='key社信仰';
+    lib.characterTitle.ryuichi='跳不出来的圈';
 },precontent:function (){
     
 },help:{},config:{},package:{
     character:{
         character:{
             shiroha:["male","xKey",3,["key_yuzhao","key_diefan"],[]],
+            ryuichi:["male","xKey",4,["key_baoyi","key_tuipi2"],[]],
         },
         translate:{
             shiroha:"鸣濑白羽",
+            ryuichi:"三谷良一",
         },
     },
     card:{
@@ -168,6 +171,88 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
         },
                 },
             },
+            "key_baoyi":{
+                audio:"ext:Key杀:2",
+                trigger:{
+                    player:"loseEnd",
+                },
+                direct:true,
+                filter:function (event,player){
+        for(var i=0;i<event.cards.length;i++){
+            if(event.cards[i].original=='e') return true;
+        }
+        return false;
+    },
+                content:function (){
+        'step 0'
+        event.num=0;
+        for(var i=0;i<trigger.cards.length;i++){
+            if(trigger.cards[i].original=='e') event.num++;
+        }
+        'step 1'
+        player.chooseTarget(get.prompt('key_baoyi'),function(card,player,target){
+            if(target==player) return false;
+            if(!target.sex) return false;
+            if(target.sex=='female') return true;
+            return target.countDiscardableCards(player,'hej');
+        }).set('ai',function(target){
+            return -get.attitude(_status.event.player,target);
+        });
+        'step 2'
+        if(result.bool){
+            event.num--;
+            var target=result.targets[0];
+            player.logSkill('key_baoyi',target);
+            player.line(target,'green');
+            if(target.sex=='female'){
+                target.loseHp();
+            }
+            else{
+                player.discardPlayerCard(target,'he',2,true);
+            }
+        }
+        else event.finish();
+        'step 3'
+        if(event.num>0) event.goto(1);
+        
+        
+        
+        
+        
+        
+    },
+                ai:{
+                    noe:true,
+                    reverseEquip:true,
+                    effect:{
+                        target:function (card,player,target,current){
+                if(get.type(card)=='equip') return [1,3];
+            },
+                    },
+                },
+            },
+            "key_tuipi2":{
+                trigger:{
+                    player:"chooseToDiscardBegin",
+                },
+                forced:true,
+                filter:function (event,player){
+        return event.parent.name=='phaseDiscard';
+    },
+                content:function (){
+        trigger.position='he';
+    },
+                mod:{
+                    targetEnabled:function (card,player,target){
+            if(['guohe','shunshou'].contains(card.name)){
+                return false;
+            }
+        },
+                    maxHandcard:function (player,num){
+            return num-player.countCards('e');
+        },
+                },
+            },
         },
         translate:{
             "key_xunjie":"迅捷",
@@ -178,6 +263,10 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
             "key_diefan_info":"出牌阶段限一次，你可以指定一名男性角色，并令其选择一项：①获得你的一张手牌，然后令你回复1点体力。②交给你一张红桃手牌，然后你令其回复1点体力。",
             "key_yuzhao2":"预兆",
             "key_yuzhao2_info":"",
+            "key_baoyi":"爆衣",
+            "key_baoyi_info":"当你失去一张装备牌时，你可以选择一项：①弃置一名其他男性角色的至多两张牌。②令一名其他女性角色失去1点体力。",
+            "key_tuipi2":"蜕皮",
+            "key_tuipi2_info":"锁定技，你不能成为【过河拆桥】或【顺手牵羊】的目标。你装备区的牌始终计入你的手牌上限。",
         },
     },
     intro:"",
@@ -185,4 +274,4 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
     diskURL:"",
     forumURL:"",
     version:"1.0",
-},files:{"character":["shiroha.jpg"],"card":[],"skill":[]}}})
+},files:{"character":["ryuichi.jpg"],"card":[],"skill":[]}}})
