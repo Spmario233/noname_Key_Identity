@@ -3,6 +3,7 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
     lib.translate.xKey='键';
     lib.characterTitle.shiroha='key社信仰';
     lib.characterTitle.ryuichi='跳不出来的圈';
+    lib.characterTitle.kobato='使命的召唤者';
 },precontent:function (){
     
 },help:{},config:{},package:{
@@ -10,10 +11,12 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
         character:{
             shiroha:["male","xKey",3,["key_yuzhao","key_diefan"],[]],
             ryuichi:["male","xKey",4,["key_baoyi","key_tuipi2"],[]],
+            kobato:["male","xKey",4,["key_shuizhan","key_shendun"],[]],
         },
         translate:{
             shiroha:"鸣濑白羽",
             ryuichi:"三谷良一",
+            kobato:"鸣濑小鸠",
         },
     },
     card:{
@@ -253,6 +256,136 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
         },
                 },
             },
+            "key_shuizhan":{
+                audio:"ext:Key杀:2",
+                trigger:{
+                    player:"useCard",
+                },
+                filter:function (event,player){
+        return event.card.name=='sha';
+    },
+                checkx:function (event,player){
+        var att=0;
+        for(var i=0;i<event.targets.length;i++){
+            att+=get.attitude(player,event.targets[i]);
+        }
+        return att<0;
+    },
+                usable:1,
+                direct:true,
+                content:function (){
+        "step 0"
+        var check=lib.skill.key_shuizhan.checkx(trigger,player);
+        player.chooseToDiscard(get.prompt('key_shuizhan')).set('ai',function(card){
+            if(_status.event.check) return 6-get.value(card);
+            return 0;
+        }).set('check',check).set('logSkill','key_shuizhan');
+        "step 1"
+        if(result.bool){
+            if(get.color(result.cards[0])=='red'){
+                player.addTempSkill('shuizhan_red',{player:'useCardAfter'});
+            }
+            else{
+                player.addTempSkill('shuizhan_black',{player:'useCardAfter'});
+            }
+        }
+        else{
+            player.storage.counttrigger.key_shuizhan--;
+        }
+    },
+            },
+            "shuizhan_red":{
+                ai:{
+                    unequip:true,
+                    skillTagFilter:function (player,tag,arg){
+            if(arg&&arg.name=='sha') return true;
+            return false;
+        },
+                },
+                trigger:{
+                    source:"damageBegin",
+                },
+                filter:function (event){
+        return event.card&&event.card.name=='sha'&&event.notLink();
+    },
+                silent:true,
+                popup:false,
+                forced:true,
+                audio:"ext:Key杀:false",
+                content:function (){
+        trigger.num++;
+    },
+            },
+            "shuizhan_black":{
+                audio:"ext:Key杀:2",
+                trigger:{
+                    player:"shaBegin",
+                },
+                silent:true,
+                popup:false,
+                forced:true,
+                content:function (){
+        trigger.target.addTempSkill('fengyin');
+        if(typeof trigger.shanRequired=='number'){
+            trigger.shanRequired++;
+        }
+        else{
+            trigger.shanRequired=2;
+        }
+    },
+            },
+            "key_shendun":{
+                trigger:{
+                    player:"phaseUseEnd",
+                },
+                direct:true,
+                filter:function (event,player){
+        return !player.getStat('damage');
+    },
+                content:function (){
+        'step 0'
+        player.chooseControl('摸牌','令人回血','取消').set('prompt',get.prompt('key_shendun')).set('ai',function(){
+            if(game.hasPlayer(function(current){
+                return current!=player&&current.isDamaged()&&get.recoverEffect(current,player,player)>=(Math.max[player.hp-player.countCards('h'),1]);
+            })) return '令人回血';
+            return '摸牌';
+        });
+        'step 1'
+        if(result.control=='取消') event.finish();
+        else if(result.control=='摸牌'){
+            player.logSkill('key_shendun');
+            player.draw(2);
+            event.finish();
+        }
+        else player.chooseTarget(true,function(card,player,target){
+            return target!=player&&target.isDamaged();
+        }).set('ai',function(target){
+            var player=_status.event.player;
+            return get.recoverEffect(current,player,player);
+        });
+        'step 2'
+        if(result.bool&&result.targets&&result.targets.length){
+            var target=result.targets[0];
+            player.logSkill('key_shendun',target);
+            player.line(target,'thunder');
+            target.recover();
+        }
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    },
+                audio:2,
+            },
         },
         translate:{
             "key_xunjie":"迅捷",
@@ -267,6 +400,14 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
             "key_baoyi_info":"当你失去一张装备牌时，你可以选择一项：①弃置一名其他男性角色的至多两张牌。②令一名其他女性角色失去1点体力。",
             "key_tuipi2":"蜕皮",
             "key_tuipi2_info":"锁定技，你不能成为【过河拆桥】或【顺手牵羊】的目标。你装备区的牌始终计入你的手牌上限。",
+            "key_shuizhan":"水战",
+            "key_shuizhan_info":"每回合限一次。当你使用【杀】时，你可以弃置一张牌。若此牌为红色，则此牌结算过程中所有目标角色的防具均无效且此【杀】的伤害+1；若此牌为黑色，则所有目标角色的非锁定技全部失效直到回合结束，且响应此【杀】需要的【闪】的数目+1。",
+            "shuizhan_red":"水战",
+            "shuizhan_red_info":"",
+            "shuizhan_black":"水战",
+            "shuizhan_black_info":"",
+            "key_shendun":"神蹲",
+            "key_shendun_info":"出牌阶段结束时，若你本阶段内未造成过伤害，则你可以选择一项：①摸两张牌 。②令一名其他角色回复1点体力。",
         },
     },
     intro:"",
@@ -274,4 +415,4 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
     diskURL:"",
     forumURL:"",
     version:"1.0",
-},files:{"character":["ryuichi.jpg"],"card":[],"skill":[]}}})
+},files:{"character":["kobato.jpg"],"card":[],"skill":[]}}})
