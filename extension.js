@@ -4,6 +4,8 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
     lib.characterTitle.shiroha='key社信仰';
     lib.characterTitle.ryuichi='跳不出来的圈';
     lib.characterTitle.kobato='使命的召唤者';
+    lib.characterTitle.umi='血小◆';
+    lib.characterTitle.umi2='血小◆';
 },precontent:function (){
     
 },help:{},config:{},package:{
@@ -12,11 +14,15 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
             shiroha:["male","xKey",3,["key_yuzhao","key_diefan"],[]],
             ryuichi:["male","xKey",4,["key_baoyi","key_tuipi2"],[]],
             kobato:["male","xKey",4,["key_shuizhan","key_shendun"],[]],
+            umi:["female","xKey",3,["key_xunhuan","key_chaofan","key_qihuan"],[]],
+            "umi2":["female","xKey",3,[],["unseen","forbidai"]],
         },
         translate:{
             shiroha:"鸣濑白羽",
             ryuichi:"三谷良一",
             kobato:"鸣濑小鸠",
+            umi:"加藤うみ",
+            "umi2":"鹰原羽未",
         },
     },
     card:{
@@ -384,7 +390,168 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
         
         
     },
-                audio:2,
+                audio:"ext:Key杀:2",
+            },
+            "key_xunhuan":{
+                trigger:{
+                    player:"phaseAfter",
+                },
+                priority:-50,
+                check:function (event,player){
+        return player.hp>=2;
+    },
+                filter:function (event,player){
+        return player.countCards('h')<player.hp;
+    },
+                content:function (){
+        player.loseHp();
+        player.insertPhase();
+    },
+            },
+            "key_chaofan":{
+                audio:"ext:Key杀:2",
+                enable:"phaseUse",
+                filterCard:function (card,player){
+        if(ui.selected.cards.length){
+            return get.suit(card)!=get.suit(ui.selected.cards[0]);
+        }
+        else return true;
+    },
+                complexCard:true,
+                usable:1,
+                selectCard:2,
+                check:function (card){
+        return 6-get.value(card);
+    },
+                filterTarget:function (card,player,target){
+        return target!=player;
+    },
+                content:function (){
+        if(player.hp>2){
+            target.draw();
+            target.recover();
+        }
+        else if(player.hp==2){
+            target.draw(2);
+        }
+        else{
+            target.damage();
+        }
+    },
+                ai:{
+                    order:2,
+                    result:{
+                        target:function (player,target){
+                if(player.hp>2){
+                    return get.recoverEffect(target,player,target)+1;
+                }
+                if(player.hp==2){
+                    return 2;
+                }
+                return get.damageEffect(target,player,target);
+            },
+                    },
+                },
+            },
+            "key_qihuan":{
+                limited:true,
+                unique:true,
+                init:function (player,skill){
+        player.storage[skill]=false;
+    },
+                trigger:{
+                    player:"dying",
+                },
+                priority:6,
+                filter:function (event,player){
+        return game.dead.length>0;
+    },
+                check:function (){
+        return Math.random()<0.5;
+    },
+                skillAnimation:true,
+                content:function (){
+        'step 0'
+        player.awakenSkill('key_qihuan');
+        player.storage.key_qihuan=true;
+        event.toChoose=[];
+        event.choosed=[];
+        event.liner=[];
+        event.num=0;
+        for(var i=0;i<game.dead.length;i++){
+            var skills=game.dead[i].skills;
+            for(var j=0;j<skills.length;j++){
+                if(!event.toChoose.contains(skills[j])) event.toChoose.push(skills[j]);
+            }
+        }
+        'step 1'
+        if(!event.toChoose.length) event.finish();
+        else{
+            var prompt2=event.choosed.length==1?"(0/2)":"(1/2)";
+            player.chooseControl(event.toChoose).set('prompt','请选择获得其中的一个技能').set('prompt2',prompt2).set('ai',function(){
+                if(!event.toChoose.contains('cancel2')) return get.rand(event.toChoose.length);
+                return get.rand(event.toChoose.length-1);
+            });
+        }
+        'step 2'
+        if(result.control&&result.control!='cancel2'){
+            for(var i=0;i<game.dead.length;i++){
+                if(game.dead[i].hasSkill(result.control)){
+                    event.liner.push(game.dead[i]);break;
+                }
+            }
+            event.choosed.push(result.control);
+            event.toChoose.remove(result.control);
+            if(event.choosed.length==1&&event.toChoose.length>0){
+                event.toChoose.push('cancel2');
+                event.goto(1);
+            }
+        }
+        'step 3'
+        var getColor=function(group){
+            switch(group){
+                case "wei":return "thunder";
+                case "shu":return "fire";
+                case "wu":return "green";
+                case "qun":return {color:[255, 255, 0]};
+                case "xKey":return null;
+                default:return null;
+            }
+        }
+        var liner=event.liner[event.num];
+        liner.line(player,getColor(liner.group));
+        player.popup(event.choosed[event.num],get.groupnature(liner.group,'raw'));
+        game.log(player,'获得了',liner,'的技能',event.choosed[event.num])
+        event.num++;
+        game.delay();
+        if(event.num<event.choosed.length) event.redo();
+        'step 4'
+        player.reinit('umi','umi2',player.maxHp);
+        player.addSkill(event.choosed);
+        player.recover(2-player.hp);
+        game.delay();
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    },
+                mark:true,
+                intro:{
+                    content:"limited",
+                },
             },
         },
         translate:{
@@ -408,6 +575,12 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
             "shuizhan_black_info":"",
             "key_shendun":"神蹲",
             "key_shendun_info":"出牌阶段结束时，若你本阶段内未造成过伤害，则你可以选择一项：①摸两张牌 。②令一名其他角色回复1点体力。",
+            "key_xunhuan":"循环",
+            "key_xunhuan_info":"回合结束时，若你的手牌数小于体力值，则你可以失去1点体力，然后进行一个额外的回合。",
+            "key_chaofan":"炒饭",
+            "key_chaofan_info":"出牌阶段限一次。你可以弃置两张花色不同的手牌并选择一名其他角色。然后，若你的体力值：①大于2：其回复1点体力并摸一张牌；②等于2，其摸两张牌；③小于2，其受到来自你的1点伤害。",
+            "key_qihuan":"七幻",
+            "key_qihuan_info":"限定技，当你进入濒死状态时，若场上有已死亡的角色，则你可以失去所有技能，获得这些角色的至多两个技能。然后，你将体力回复至2点。",
         },
     },
     intro:"",
@@ -415,4 +588,4 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
     diskURL:"",
     forumURL:"",
     version:"1.0",
-},files:{"character":["kobato.jpg"],"card":[],"skill":[]}}})
+},files:{"character":["umi2.jpg"],"card":[],"skill":[]}}})
