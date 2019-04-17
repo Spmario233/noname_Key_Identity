@@ -16,6 +16,7 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
             kobato:["male","xKey",4,["key_shuizhan","key_shendun"],[]],
             umi:["female","xKey",3,["key_xunhuan","key_chaofan","key_qihuan"],[]],
             "umi2":["female","xKey",3,[],["unseen","forbidai"]],
+            ao:["female","xKey",3,["key_kuihun","key_jiyang","key_shiran"],[]],
         },
         translate:{
             shiroha:"鸣濑白羽",
@@ -23,6 +24,7 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
             kobato:"鸣濑小鸠",
             umi:"加藤うみ",
             "umi2":"鹰原羽未",
+            ao:"空门苍",
         },
     },
     card:{
@@ -553,6 +555,136 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
                     content:"limited",
                 },
             },
+            "key_kuihun":{
+                trigger:{
+                    global:"dying",
+                },
+                init:function (player,skill){
+        if(player.storage[skill]==undefined) player.storage[skill]=[];
+        if(player.storage.key_kuihun_suit==undefined) player.storage.key_kuihun_suit=[];
+    },
+                marktext:"蝶",
+                intro:{
+                    name:"七影蝶",
+                    content:"cards",
+                },
+                priority:6,
+                filter:function (event,player){
+        return player!=event.player;
+    },
+                audio:"ext:Key杀:2",
+                content:function (){
+        "step 0"
+        player.draw();
+        var target=trigger.player;
+        player.line(target);
+        if(target.countCards('h')){
+            player.chooseCardButton(target,target.getCards('h'),true);
+        }else event.finish();
+        "step 1"
+        if(result.bool){
+            var card=result.links[0];
+            trigger.player.lose(result.links[0],ui.special);
+            trigger.player.$give(card,player);
+            player.storage.key_kuihun.push(card);
+            player.storage.key_kuihun_suit.push(get.suit(card));
+            player.markSkill('key_kuihun');
+        }
+    },
+            },
+            "key_jiyang":{
+                trigger:{
+                    player:["useCard","respond"],
+                },
+                init:function (player){
+        if(player.storage.key_kuihun_suit==undefined) player.storage.key_kuihun_suit=[];
+    },
+                mod:{
+                    cardUsable:function (card,player){
+            if(player.storage.key_kuihun_suit.contains(get.suit(card))) return Infinity;
+        },
+                    targetInRange:function (card,player){
+            if(player.storage.key_kuihun_suit.contains(get.suit(card))) return true;
+        },
+                },
+                filter:function (event,player){
+        if(player.storage.key_kuihun_suit==undefined) player.storage.key_kuihun_suit=[];
+        return player.storage.key_kuihun_suit.contains(get.suit(event.card));
+    },
+                frequent:true,
+                content:function (){
+        player.draw();
+    },
+            },
+            "key_shiran":{
+                skillAnimation:true,
+                audio:"ext:Key杀:2",
+                derivation:["key_diegui"],
+                unique:true,
+                trigger:{
+                    player:"phaseBeginStart",
+                },
+                filter:function (event,player){
+        return player.storage.key_kuihun&&player.storage.key_kuihun.length>=player.hp&&!player.storage.key_shiran;
+    },
+                forced:true,
+                priority:3,
+                content:function (){
+        player.gainMaxHp();
+        player.recover();
+        player.removeSkill('key_kuihun');
+        player.markSkill('key_kuihun');
+        player.addSkill('key_diegui');
+        player.awakenSkill('key_shiran');
+        player.storage.key_shiran=true;
+    },
+            },
+            "key_diegui":{
+                enable:"phaseUse",
+                usable:1,
+                audio:"ext:Key杀:2",
+                filterTarget:function (card,playerx,targetx){
+        return playerx!=targetx;
+    },
+                filter:function (event,player){
+        if(player.storage.key_kuihun==undefined) player.storage.key_kuihun=[];
+        return player.storage.key_kuihun.length>0;
+    },
+                content:function (){
+        "step 0"
+        player.chooseCardButton(player.storage.key_kuihun,true);
+        "step 1"
+        var card=result.links[0];
+        card.discard();
+        player.$give(card,target);
+        target.gain(card);
+        player.storage.key_kuihun.remove(card);
+        if(!player.storage.key_kuihun.length){
+            player.unmarkSkill('key_kuihun');
+        }
+        else{
+            player.markSkill('key_kuihun');
+        }
+        player.syncStorage('key_kuihun');
+        "step 2"
+        target.draw(2);
+        target.recover();
+        player.link(false);
+        player.turnOver(false);
+    },
+                ai:{
+                    order:1,
+                    result:{
+                        target:function (player,target){
+                var num=0;
+                if(target.countCards('h')<target.hp) num+=1;
+                if(target.isTurnedOver()) num+=3;
+                if(target.isDamaged()&&target.hp<3) num+=2;
+                return num;
+            },
+                    },
+                },
+            },
         },
         translate:{
             "key_xunjie":"迅捷",
@@ -581,6 +713,14 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
             "key_chaofan_info":"出牌阶段限一次。你可以弃置两张花色不同的手牌并选择一名其他角色。然后，若你的体力值：①大于2：其回复1点体力并摸一张牌；②等于2，其摸两张牌；③小于2，其受到来自你的1点伤害。",
             "key_qihuan":"七幻",
             "key_qihuan_info":"限定技，当你进入濒死状态时，若场上有已死亡的角色，则你可以失去所有技能，获得这些角色的至多两个技能。然后，你将体力回复至2点。",
+            "key_kuihun":"窥魂",
+            "key_kuihun_info":"当有其他角色进入濒死状态时，你可以摸一张牌，然后观看该角色的手牌并将其中的一张置于你的武将牌上，称之为「蝶」。",
+            "key_jiyang":"激扬",
+            "key_jiyang_info":"锁定技，当你使用或打出一张牌时，若「蝶」中有/曾有与其花色相同的牌，则你摸一张牌。你使用这些牌时没有次数和距离限制。",
+            "key_shiran":"释然",
+            "key_shiran_info":"觉醒技，准备阶段，若你武将牌上「蝶」的数目大于你的体力值，则你加1点体力上限并回复1点体力，失去技能〖窥魂〗并获得技能〖蝶归〗。",
+            "key_diegui":"蝶归",
+            "key_diegui_info":"出牌阶段限一次，你可以将一张「蝶」交给一名其他角色，该角色摸两张牌并回复1点体力，然后将武将牌复原。",
         },
     },
     intro:"",
@@ -588,4 +728,4 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
     diskURL:"",
     forumURL:"",
     version:"1.0",
-},files:{"character":["umi2.jpg"],"card":[],"skill":[]}}})
+},files:{"character":["ao.jpg"],"card":[],"skill":[]}}})
