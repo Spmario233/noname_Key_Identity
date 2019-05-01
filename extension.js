@@ -1,4 +1,33 @@
 game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key杀",content:function (config,pack){
+    //设置键势力的颜色
+        var style2=document.createElement('style');
+        style2.innerHTML=".player .identity[data-color='key'],";
+        style2.innerHTML=".player .identity[data-color='xKey'],";
+	    style2.innerHTML+="div[data-nature='key'],";
+    	style2.innerHTML+="span[data-nature='key'] {text-shadow: black 0 0 1px,rgba(203, 177, 255,1) 0 0 2px,rgba(203, 177, 255,1) 0 0 5px,rgba(203, 177, 255,1) 0 0 10px,rgba(203, 177, 255,1) 0 0 10px}";
+    	style2.innerHTML+="div[data-nature='keym'],";
+	    style2.innerHTML+="span[data-nature='keym'] {text-shadow: black 0 0 1px,rgba(203, 177, 255,1) 0 0 2px,rgba(203, 177, 255,1) 0 0 5px,rgba(203, 177, 255,1) 0 0 5px,rgba(203, 177, 255,1) 0 0 5px,black 0 0 1px;}";
+    	style2.innerHTML+="div[data-nature='keymm'],";
+    	style2.innerHTML+="span[data-nature='keymm'] {text-shadow: black 0 0 1px,rgba(203, 177, 255,1) 0 0 2px,rgba(203, 177, 255,1) 0 0 2px,rgba(203, 177, 255,1) 0 0 2px,rgba(203, 177, 255,1) 0 0 2px,black 0 0 1px;}";
+    	document.head.appendChild(style2);
+        //使键势力角色能够读取到自己的颜色
+        get.groupnature=function(group,method){
+			var nature;
+			switch(group){
+				case 'shen':nature='thunder';break;
+				case 'wei':nature='water';break;
+				case 'shu':nature='soil';break;
+				case 'wu':nature='wood';break;
+				case 'qun':nature='metal';break;
+				case 'key':nature='key';break;
+                case 'xKey':nature='key';break;
+				default:return '';
+			}
+			if(method=='raw'){
+				return nature;
+			}
+			return nature+'mm';
+		}
     lib.group.push('xKey');
     lib.translate.xKey='键';
     lib.characterTitle.shiroha='key社信仰';
@@ -6,6 +35,7 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
     lib.characterTitle.kobato='使命的召唤者';
     lib.characterTitle.umi='血小◆';
     lib.characterTitle.umi2='血小◆';
+    lib.characterTitle.kotomi='Titan_Gin';
 },precontent:function (){
     
 },help:{},config:{},package:{
@@ -17,6 +47,7 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
             umi:["female","xKey",3,["key_xunhuan","key_chaofan","key_qihuan"],[]],
             "umi2":["female","xKey",3,[],["unseen","forbidai"]],
             ao:["female","xKey",3,["key_kuihun","key_jiyang","key_shiran"],[]],
+            kotomi:["female","xKey",3,["key_kotomi1","key_kotomi2","key_kotomi3"],[]],
         },
         translate:{
             shiroha:"鸣濑白羽",
@@ -25,6 +56,7 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
             umi:"加藤うみ",
             "umi2":"鹰原羽未",
             ao:"空门苍",
+            kotomi:"一之濑琴美",
         },
     },
     card:{
@@ -685,6 +717,160 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
                     },
                 },
             },
+            "key_kotomi1":{
+                init:function (player,skill){
+        if(!player.storage[skill]) player.storage[skill]=[];
+    },
+                trigger:{
+                    target:"useCardToBegin",
+                },
+                filter:function (event,player){
+        return get.type(event.card)=='trick'&&player.storage.key_kotomi1.length<10;
+    },
+                frequent:true,
+                content:function (){
+        'step 0'
+        event.cards=get.cards(2);
+        player.chooseCardButton('【提箱】选择获得其中的一张，将另一张作为「思出」牌置于武将牌上。',true,event.cards).set('ai',function(button){
+            return get.value(button.link);
+        });
+        'step 1'
+        var togain=result.links[0];
+        event.cards.remove(togain);
+        player.gain(togain,'gain2');
+        player.storage.key_kotomi1.push(event.cards[0]);
+        player.markSkill('key_kotomi1');
+    },
+                marktext:"思",
+                intro:{
+                    name:"思出",
+                    mark:function (dialog,content,player){
+            if(content&&content.length){
+                if(player==game.me||player.isUnderControl()){
+                    dialog.addAuto(content);
+                }
+                else{
+                    return '共有'+get.cnNumber(content.length)+'张「思出」牌';
+                }
+            }
+        },
+                    content:function (content,player){
+            if(content&&content.length){
+                if(player==game.me||player.isUnderControl()){
+                    return get.translation(content);
+                }
+                return '共有'+get.cnNumber(content.length)+'张「思出」牌';
+            }
+        },
+                },
+            },
+            "key_kotomi2":{
+                audio:"ext:Key杀:2",
+                filter:function (event,player){
+        if(event.responded) return false;
+        if(!event.filterCard({name:'shan'})) return false;
+        if(!player.storage.key_kotomi1) return false;
+        for(var i=0;i<player.storage.key_kotomi1.length;i++){
+            if(get.color(player.storage.key_kotomi1[i])=='red') return true;
+        }
+        return false;
+    },
+                trigger:{
+                    player:"chooseToRespondBegin",
+                },
+                check:function (event,player){
+        if(get.damageEffect(player,event.player,player)>=0) return false;
+        return true;
+    },
+                content:function (){
+        'step 0'
+        player.chooseCardButton('弃置一张红色「思出」牌，视为使用或打出一张【闪】',true,player.storage.key_kotomi1,function(button){
+            return get.color(button.link)=='red';
+        }).set('ai',function(button){
+            return get.value(button.link);
+        });
+        'step 1'
+        if(result.bool){
+            var tothrow=result.links[0];
+            player.storage.key_kotomi1.remove(tothrow);
+            player.$throw(tothrow);
+            tothrow.discard();
+            if(player.storage.key_kotomi1.length>0) player.markSkill('key_kotomi1');
+            else player.unmarkSkill('key_kotomi1');
+            trigger.untrigger();
+            trigger.responded=true;
+            trigger.result={bool:true,card:{name:'shan'}}
+        }
+    },
+            },
+            "key_kotomi3":{
+                group:["key_kotomi3_addDamage"],
+                subSkill:{
+                    addDamage:{
+                        trigger:{
+                            source:"damageBegin",
+                        },
+                        forced:true,
+                        silent:true,
+                        popup:false,
+                        filter:function (event,player){
+                if(player.storage.key_kotomi3>1) return false;
+                return event.card.name=='wanjian'&&event.cards.length==3&&get.color(event.cards)=='black';
+            },
+                        content:function (){
+                trigger.num++;
+            },
+                        sub:true,
+                    },
+                },
+                audio:"ext:Key杀:2",
+                enable:"phaseUse",
+                init:function (player,skill){
+        if(player.storage[skill]==undefined) player.storage[skill]=0;
+    },
+                filter:function (event,player){
+        if(!player.storage.key_kotomi1) return false;
+        return player.storage.key_kotomi1.length>0;
+    },
+                chooseButton:{
+                    dialog:function (event,player){
+            return ui.create.dialog('宇弦',player.storage.key_kotomi1,'hidden');
+        },
+                    filter:function (button,player){
+            return get.color(button.link)=='black';
+        },
+                    select:3,
+                    backup:function (links,player){
+            return {
+                filterCard:function(){return false},
+                selectCard:-1,
+                viewAs:{name:'wanjian'},
+                cards:links,
+                onuse:function(result,player){
+                    player.storage.key_kotomi3++;
+                    result.cards=lib.skill[result.skill].cards;
+                    for(var i=0;i<result.cards.length;i++){
+                        player.storage.key_kotomi1.remove(result.cards[i]);
+                    }
+                    player.syncStorage('key_kotomi3');
+                    if(!player.storage.key_kotomi1.length){
+                        player.unmarkSkill('key_kotomi1');
+                    }
+                    else{
+                        player.markSkill('key_kotomi1');
+                    }
+                    player.logSkill('key_kotomi1',result.targets);
+                }
+            }
+        },
+                },
+                ai:{
+                    order:10,
+                    result:{
+                        player:1,
+                    },
+                },
+            },
         },
         translate:{
             "key_xunjie":"迅捷",
@@ -721,6 +907,12 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
             "key_shiran_info":"觉醒技，准备阶段，若你武将牌上「蝶」的数目大于你的体力值，则你加1点体力上限并回复1点体力，失去技能〖窥魂〗并获得技能〖蝶归〗。",
             "key_diegui":"蝶归",
             "key_diegui_info":"出牌阶段限一次，你可以将一张「蝶」交给一名其他角色，该角色摸两张牌并回复1点体力，然后将武将牌复原。",
+            "key_kotomi1":"提箱",
+            "key_kotomi1_info":"当锦囊牌对你生效时，你可以观看牌堆顶的两张牌，获得其中的一张并将另一张背面朝上扣置于你的武将牌上，称为「思出」。",
+            "key_kotomi2":"小熊",
+            "key_kotomi2_info":"当你需要使用或打出一张【闪】时，你可以弃置一张红色的「思出」牌，然后视为使用或打出了一张【闪】。",
+            "key_kotomi3":"宇弦",
+            "key_kotomi3_info":"出牌阶段，你可以将三张黑色的「思出」牌当做【万箭齐发】使用。你于一局游戏内以此法使用的第一张【万箭齐发】的伤害+1。",
         },
     },
     intro:"",
@@ -728,4 +920,4 @@ game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"Key�
     diskURL:"",
     forumURL:"",
     version:"1.0",
-},files:{"character":["ao.jpg"],"card":[],"skill":[]}}})
+},files:{"character":["kotomi.jpg"],"card":[],"skill":[]}}})
